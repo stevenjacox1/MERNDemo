@@ -10,9 +10,11 @@
   "scripts": {
     "install-all": "npm install",
     "build": "npm run build -w server && npm run build -w client",
-    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev": "concurrently -k \"npm run server:dotnet\" \"npm run client\"",
+    "dev:node": "concurrently -k \"npm run server\" \"npm run client\"",
     "start": "npm start -w server",
     "server": "npm run dev -w server",
+    "server:dotnet": "dotnet run --project server-dotnet/ListingsApi.csproj",
     "client": "npm run dev -w client"
   },
   "devDependencies": {

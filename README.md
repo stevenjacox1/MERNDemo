@@ -109,7 +109,7 @@ interface Listing {
 
 2. **Client .env file** (`client/.env`):
    ```
-   REACT_APP_API_URL=http://localhost:5000
+   REACT_APP_API_URL=http://localhost:5001/api
    ```
 
 The optional C# API reads `MongoDb:ConnectionString`, `MongoDb:DatabaseName`, and `MongoDb:CollectionName` from `server-dotnet/appsettings.json`. Override the connection string with the `MongoDb__ConnectionString` environment variable when using MongoDB Atlas or another non-local database.
@@ -122,7 +122,13 @@ The optional C# API reads `MongoDb:ConnectionString`, `MongoDb:DatabaseName`, an
 npm run dev
 ```
 
-This starts both the Express server on `http://localhost:5000` and React on `http://localhost:3000`
+This starts the ASP.NET API on `http://localhost:5001` and React on `http://localhost:3000`. The API uses MongoDB by default; set `DataSource` to `mock` in `server-dotnet/appsettings.json` to use the in-memory sample listings instead.
+
+To run the Node/Express backend with React instead, use:
+
+```bash
+npm run dev:node
+```
 
 #### Individual Services
 
@@ -131,24 +137,23 @@ This starts both the Express server on `http://localhost:5000` and React on `htt
 npm run server
 ```
 
+**Start .NET API Only**:
+```bash
+npm run server:dotnet
+```
+
 **Start Client Only**:
 ```bash
 npm run client
 ```
 
-#### Optional C# and MongoDB Backend
+#### Backend Selection
 
-The Node/Express backend is the default. Set `DATA_SOURCE=mongo` (the default) to persist listings in MongoDB; on first startup, the server seeds an empty collection from `server/src/sample_listings.json`. `MONGODB_URI` accepts a local or Atlas connection string, and `MONGODB_DATABASE` and `MONGODB_COLLECTION` can override the database and collection names. The server does not begin listening until MongoDB is reachable in this mode.
+The Node/Express backend is available with `npm run dev:node`. Set `DATA_SOURCE=mongo` (the default) to persist listings in MongoDB; on first startup, the server seeds an empty collection from `server/src/sample_listings.json`. `MONGODB_URI` accepts a local or Atlas connection string, and `MONGODB_DATABASE` and `MONGODB_COLLECTION` can override the database and collection names. The server does not begin listening until MongoDB is reachable in this mode.
 
 Set `DATA_SOURCE=mock` in `server/.env` to load the same sample listings directly into memory without connecting to MongoDB. Mock-mode changes made through create, update, or delete endpoints last only until the server restarts.
 
-To run the optional ASP.NET Core backend instead, start MongoDB, then run:
-
-```bash
-dotnet run --project server-dotnet/ListingsApi.csproj
-```
-
-The C# API implements the same `/api` routes and defaults to MongoDB. Its `DataSource` setting in `server-dotnet/appsettings.json` can be `mongo` or `mock`; setting it to `mock` loads `server/src/sample_listings.json` into memory and does not connect to MongoDB. You can override the setting with the `DATA_SOURCE` environment variable. To point the React client at it, set `REACT_APP_API_URL` in `client/.env` to the API's actual URL and restart the client. This C# backend runs separately; the root npm scripts continue to start Node/Express.
+The ASP.NET Core backend is the default for `npm run dev` and implements the same `/api` routes. Its `DataSource` setting in `server-dotnet/appsettings.json` can be `mongo` or `mock`; setting it to `mock` loads `server/src/sample_listings.json` into memory and does not connect to MongoDB. You can override the setting with the `DATA_SOURCE` environment variable. The React client should use `REACT_APP_API_URL=http://localhost:5001/api` in `client/.env` when using this backend.
 
 #### Production Build
 
