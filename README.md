@@ -14,6 +14,11 @@ MERN-Demo/
 │   │   └── middleware/    # Custom middleware
 │   ├── package.json
 │   └── tsconfig.json
+├── server-dotnet/          # Optional ASP.NET Core and MongoDB backend
+│   ├── Models/
+│   ├── Services/
+│   ├── ListingsApi.csproj
+│   └── Program.cs
 ├── client/                 # React frontend
 │   ├── src/
 │   │   ├── components/    # Reusable UI components
@@ -59,7 +64,7 @@ interface Listing {
 - **Status Tracking**: Track active, pending, and sold listings
 - **Responsive Design**: Mobile-friendly interface
 - **RESTful API**: Complete REST API with CRUD operations
-- **Type Safety**: Full TypeScript support on both frontend and backend
+- **Type Safety**: TypeScript support for the React client and Node backend, with an optional C# backend
 
 ## Getting Started
 
@@ -67,6 +72,7 @@ interface Listing {
 
 - Node.js v16 or higher
 - npm or yarn
+- .NET 10 SDK and MongoDB, only if you want to run the optional C# backend
 
 ### Installation
 
@@ -85,6 +91,11 @@ interface Listing {
    npm install -w client
    ```
 
+4. **Restore the optional C# backend**:
+   ```bash
+   dotnet restore server-dotnet/ListingsApi.csproj
+   ```
+
 ### Configuration
 
 1. **Server .env file** (`server/.env`):
@@ -98,6 +109,8 @@ interface Listing {
    ```
    REACT_APP_API_URL=http://localhost:5000
    ```
+
+The optional C# API reads `MongoDb:ConnectionString`, `MongoDb:DatabaseName`, and `MongoDb:CollectionName` from `server-dotnet/appsettings.json`. Override the connection string with the `MongoDb__ConnectionString` environment variable when using MongoDB Atlas or another non-local database.
 
 ### Running the Application
 
@@ -120,6 +133,16 @@ npm run server
 ```bash
 npm run client
 ```
+
+#### Optional C# and MongoDB Backend
+
+The Node/Express backend remains the default. To run the ASP.NET Core backend instead, start MongoDB, then run:
+
+```bash
+dotnet run --project server-dotnet/ListingsApi.csproj
+```
+
+The C# API listens on `http://localhost:5001` by default and implements the same `/api` routes. If the MongoDB collection is empty, it seeds listings from `server/src/sample_listings.json`. To point the React client at it, set `REACT_APP_API_URL=http://localhost:5001/api` in `client/.env` and restart the client. This C# backend runs separately; the root npm scripts continue to start Node/Express.
 
 #### Production Build
 
