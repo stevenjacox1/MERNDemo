@@ -28,8 +28,31 @@
       "command": "npm",
       "args": ["run", "client"],
       "cwd": "${workspaceFolder}",
-      "problemMatcher": [],
+      "problemMatcher": {
+        "base": "$tsc",
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Starting the development server",
+          "endsPattern": "^(Compiled|Failed to compile)"
+        }
+      },
       "isBackground": true
+    },
+    {
+      "label": "Build .NET API",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "${workspaceFolder}/server-dotnet/ListingsApi.csproj"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Prepare React and .NET API",
+      "dependsOn": ["Build .NET API", "Start Frontend Client"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
     },
     {
       "label": "Build Project",

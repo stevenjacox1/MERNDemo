@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug .NET API with React",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "Prepare React and .NET API",
+      "program": "${workspaceFolder}/server-dotnet/bin/Debug/net10.0/ListingsApi.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/server-dotnet",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "env": {
+        "DATA_SOURCE": "mock",
+        "ASPNETCORE_URLS": "http://localhost:5001"
+      }
+    }
+  ]
+}
