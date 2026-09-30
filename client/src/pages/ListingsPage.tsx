@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Listing } from '../services/api';
 import ListingCard from '../components/ListingCard';
-import SearchBar, { SearchFilters } from '../components/SearchBar';
+import SearchBar, { DEFAULT_SEARCH_FILTERS, SearchFilters } from '../components/SearchBar';
 import listingsAPI from '../services/api';
 import './ListingsPage.css';
 
@@ -13,11 +13,11 @@ const ListingsPage: React.FC = () => {
   const [error, setError] = useState<{ message: string; code?: string } | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeFilters, setActiveFilters] = useState<SearchFilters>({});
+  const [activeFilters, setActiveFilters] = useState<SearchFilters>(DEFAULT_SEARCH_FILTERS);
 
   useEffect(() => {
     // Fetch initial listings
-    fetchListings({}, 1);
+    fetchListings(DEFAULT_SEARCH_FILTERS, 1);
   }, []);
 
   const fetchListings = async (filters: SearchFilters, page: number) => {

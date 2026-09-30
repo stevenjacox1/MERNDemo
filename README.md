@@ -1,22 +1,15 @@
-# Real Estate Listings Aggregator - MERN Stack Application
+# ASP.NET Core Real Estate Listings Aggregator
 
-A full-stack application built with MongoDB, Express, React, and Node.js that aggregates real estate listings from multiple MLS (Multiple Listing Service) sources.
+A full-stack application built with ASP.NET Core and React that aggregates real estate listings from multiple MLS (Multiple Listing Service) sources. The API uses MongoDB or an in-memory mock data source.
 
 ## Project Structure
 
 ```
-MERN-Demo/
-├── server/                 # Express backend
-│   ├── src/
-│   │   ├── index.ts       # Main server file
-│   │   ├── routes/        # API routes
-│   │   ├── services/      # Business logic
-│   │   └── middleware/    # Custom middleware
-│   ├── package.json
-│   └── tsconfig.json
-├── server-dotnet/          # Optional ASP.NET Core and MongoDB backend
+MERNDemo/
+├── server-dotnet/          # ASP.NET Core API
 │   ├── Models/
 │   ├── Services/
+│   ├── sample_listings.json
 │   ├── ListingsApi.csproj
 │   └── Program.cs
 ├── client/                 # React frontend
@@ -28,7 +21,7 @@ MERN-Demo/
 │   │   └── index.tsx
 │   ├── public/            # Static files
 │   └── package.json
-└── package.json          # Root workspace config
+└── package.json            # Root workspace config
 ```
 
 ## Data Model
@@ -64,7 +57,7 @@ interface Listing {
 - **Status Tracking**: Track active, pending, and sold listings
 - **Responsive Design**: Mobile-friendly interface
 - **RESTful API**: Complete REST API with CRUD operations
-- **Type Safety**: TypeScript support for the React client and Node backend, with an optional C# backend
+- **Type Safety**: TypeScript support for the React client and C# models for the API
 
 ## Getting Started
 
@@ -72,7 +65,8 @@ interface Listing {
 
 - Node.js v16 or higher
 - npm or yarn
-- .NET 10 SDK and MongoDB, only if you want to run the optional C# backend
+- .NET 10 SDK
+- MongoDB only when using the MongoDB data source
 
 ### Installation
 
@@ -81,38 +75,24 @@ interface Listing {
    npm install
    ```
 
-2. **Install server dependencies**:
-   ```bash
-   npm install -w server
-   ```
-
-3. **Install client dependencies**:
+2. **Install client dependencies**:
    ```bash
    npm install -w client
    ```
 
-4. **Restore the optional C# backend**:
+3. **Restore the .NET API**:
    ```bash
    dotnet restore server-dotnet/ListingsApi.csproj
    ```
 
 ### Configuration
 
-1. **Server .env file** (`server/.env`):
-   ```
-   PORT=5000
-   NODE_ENV=development
-   DATA_SOURCE=mongo
-   MONGODB_URI=mongodb://localhost:27017/listings
-   MONGODB_COLLECTION=listings
-   ```
-
-2. **Client .env file** (`client/.env`):
+1. **Client .env file** (`client/.env`):
    ```
    REACT_APP_API_URL=http://localhost:5001/api
    ```
 
-The optional C# API reads `MongoDb:ConnectionString`, `MongoDb:DatabaseName`, and `MongoDb:CollectionName` from `server-dotnet/appsettings.json`. Override the connection string with the `MongoDb__ConnectionString` environment variable when using MongoDB Atlas or another non-local database.
+The API reads `DataSource` and MongoDB settings from `server-dotnet/appsettings.json`. `DataSource` can be `mock` or `mongo`; MongoDB connection details can be overridden with `MongoDb__ConnectionString`, `MongoDb__DatabaseName`, and `MongoDb__CollectionName` environment variables.
 
 ### Running the Application
 
@@ -122,24 +102,13 @@ The optional C# API reads `MongoDb:ConnectionString`, `MongoDb:DatabaseName`, an
 npm run dev
 ```
 
-This starts the ASP.NET API on `http://localhost:5001` and React on `http://localhost:3000`. The API uses MongoDB by default; set `DataSource` to `mock` in `server-dotnet/appsettings.json` to use the in-memory sample listings instead.
-
-To run the Node/Express backend with React instead, use:
-
-```bash
-npm run dev:node
-```
+This starts the ASP.NET API on `http://localhost:5001` and React on `http://localhost:3000`.
 
 #### Individual Services
 
-**Start Server Only**:
-```bash
-npm run server
-```
-
 **Start .NET API Only**:
 ```bash
-npm run server:dotnet
+npm run server
 ```
 
 **Start Client Only**:
@@ -147,13 +116,11 @@ npm run server:dotnet
 npm run client
 ```
 
-#### Backend Selection
+#### Data Source
 
-The Node/Express backend is available with `npm run dev:node`. Set `DATA_SOURCE=mongo` (the default) to persist listings in MongoDB; on first startup, the server seeds an empty collection from `server/src/sample_listings.json`. `MONGODB_URI` accepts a local or Atlas connection string, and `MONGODB_DATABASE` and `MONGODB_COLLECTION` can override the database and collection names. The server does not begin listening until MongoDB is reachable in this mode.
+The ASP.NET Core API implements the `/api` routes. Set `DataSource` to `mock` in `server-dotnet/appsettings.json` to load `server-dotnet/sample_listings.json` into memory without connecting to MongoDB. Mock-mode changes made through create, update, or delete endpoints last only until the API restarts.
 
-Set `DATA_SOURCE=mock` in `server/.env` to load the same sample listings directly into memory without connecting to MongoDB. Mock-mode changes made through create, update, or delete endpoints last only until the server restarts.
-
-The ASP.NET Core backend is the default for `npm run dev` and implements the same `/api` routes. Its `DataSource` setting in `server-dotnet/appsettings.json` can be `mongo` or `mock`; setting it to `mock` loads `server/src/sample_listings.json` into memory and does not connect to MongoDB. You can override the setting with the `DATA_SOURCE` environment variable. The React client should use `REACT_APP_API_URL=http://localhost:5001/api` in `client/.env` when using this backend.
+Set `DataSource` to `mongo` to persist listings in MongoDB. The API seeds an empty collection from `server-dotnet/sample_listings.json`; use `MongoDb__ConnectionString`, `MongoDb__DatabaseName`, and `MongoDb__CollectionName` to override the values in `server-dotnet/appsettings.json`.
 
 #### Production Build
 
@@ -196,19 +163,19 @@ npm run build
 
 ```bash
 # Get all active listings
-curl http://localhost:5000/api/listings?status=active
+curl http://localhost:5001/api/listings?status=active
 
 # Search with multiple filters and request page 1
-curl "http://localhost:5000/api/listings?city=Springfield&state=VA&minPrice=300000&maxPrice=550000&minBeds=3&page=1"
+curl "http://localhost:5001/api/listings?city=Springfield&state=VA&minPrice=300000&maxPrice=550000&minBeds=3&page=1"
 
 # Search by target budget with a 20% tolerance
-curl "http://localhost:5000/api/listings?targetBudget=500000&budgetRangePercent=20&page=1"
+curl "http://localhost:5001/api/listings?targetBudget=500000&budgetRangePercent=20&page=1"
 
 # Get listings from specific MLS feed
-curl http://localhost:5000/api/listings/source/MLS_A
+curl http://localhost:5001/api/listings/source/MLS_A
 
 # Create a new listing
-curl -X POST http://localhost:5000/api/listings \
+curl -X POST http://localhost:5001/api/listings \
   -H "Content-Type: application/json" \
   -d '{
     "source": "MLS_A",
@@ -231,9 +198,9 @@ curl -X POST http://localhost:5000/api/listings \
 ## Technologies Used
 
 ### Backend
-- **Express.js**: Web framework
-- **TypeScript**: Type safety
-- **Node.js**: Runtime
+- **ASP.NET Core**: Web API framework
+- **C#**: API and domain models
+- **MongoDB.Driver**: Optional persistent data store
 
 ### Frontend
 - **React**: UI library
@@ -242,8 +209,8 @@ curl -X POST http://localhost:5000/api/listings \
 - **CSS3**: Styling
 
 ### Database
-- MongoDB is the default data source
-- Optional in-memory mock data is selected with `DATA_SOURCE=mock`
+- The in-memory mock data source is configured with `DataSource=mock`
+- MongoDB persistence is configured with `DataSource=mongo`
 
 ## Sample Data
 
@@ -264,9 +231,9 @@ The sample JSON contains 12 listings from MLS_A and MLS_B across six cities in V
 
 ## Development Notes
 
-- The project uses workspaces for easier dependency management
+- The npm workspace contains the React client
 - Mock-mode data and changes persist only during the current server session
-- TypeScript is configured for both client and server
+- TypeScript is configured for the client
 - Listings include geolocation coordinates for future mapping features
 
 ## Future Enhancements

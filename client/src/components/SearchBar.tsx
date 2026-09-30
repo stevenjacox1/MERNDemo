@@ -24,6 +24,24 @@ export interface SearchFilters {
   budgetRangePercent?: number;
 }
 
+export const DEFAULT_SEARCH_FILTERS: SearchFilters = {
+  search: '',
+  source: '',
+  city: '',
+  state: '',
+  status: '',
+  minPrice: 350000,
+  maxPrice: 650000,
+  minSqft: 800,
+  maxSqft: 2500,
+  minBeds: 2,
+  maxBeds: 4,
+  minBaths: 1,
+  maxBaths: 3,
+  targetBudget: undefined,
+  budgetRangePercent: 20
+};
+
 const US_STATES = [
   ['AL', 'Alabama'], ['AK', 'Alaska'], ['AZ', 'Arizona'], ['AR', 'Arkansas'],
   ['CA', 'California'], ['CO', 'Colorado'], ['CT', 'Connecticut'], ['DE', 'Delaware'],
@@ -41,7 +59,7 @@ const US_STATES = [
 ];
 
 const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = false }) => {
-  const [filters, setFilters] = useState<SearchFilters>({});
+  const [filters, setFilters] = useState<SearchFilters>(DEFAULT_SEARCH_FILTERS);
   const isPriceRangeInvalid = filters.minPrice !== undefined && filters.maxPrice !== undefined && filters.minPrice > filters.maxPrice;
   const isSqftRangeInvalid = filters.minSqft !== undefined && filters.maxSqft !== undefined && filters.minSqft > filters.maxSqft;
   const isBedRangeInvalid = filters.minBeds !== undefined && filters.maxBeds !== undefined && filters.minBeds > filters.maxBeds;
@@ -58,6 +76,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = false }) =>
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const numericFields = ['minPrice', 'maxPrice', 'minSqft', 'maxSqft', 'minBeds', 'maxBeds', 'minBaths', 'maxBaths', 'targetBudget', 'budgetRangePercent'];
+    if (numericFields.includes(name) && value !== '' && Number(value) < 0) {
+      return;
+    }
     const newValue = numericFields.includes(name) ? (value ? parseFloat(value) : undefined) : value || undefined;
 
     setFilters(prev => {
@@ -75,8 +96,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = false }) =>
   };
 
   const handleReset = () => {
-    setFilters({});
-    onSearch({});
+    setFilters(DEFAULT_SEARCH_FILTERS);
+    onSearch(DEFAULT_SEARCH_FILTERS);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -169,12 +190,12 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading = false }) =>
             <div className="range-inputs">
               <div className="filter-control">
                 <label htmlFor="filter-min-price">Minimum</label>
-                <input type="number" name="minPrice" id="filter-min-price" value={filters.minPrice ?? ''} onChange={handleInputChange} max={filters.maxPrice} aria-invalid={isPriceRangeInvalid} className="filter-input" />
+                <input type="number" name="minPrice" id="filter-min-price" value={filters.minPrice ?? ''} onChange={handleInputChange} min="0" max={filters.maxPrice} aria-invalid={isPriceRangeInvalid} className="filter-input" />
                 {isPriceRangeInvalid && <span className="range-error" role="alert">Minimum value cannot be greater than the maximum value.</span>}
               </div>
               <div className="filter-control">
                 <label htmlFor="filter-max-price">Maximum</label>
-                <input type="number" name="maxPrice" id="filter-max-price" value={filters.maxPrice ?? ''} onChange={handleInputChange} min={filters.minPrice} className="filter-input" />
+                <input type="number" name="maxPrice" id="filter-max-price" value={filters.maxPrice ?? ''} onChange={handleInputChange} min={filters.minPrice ?? 0} className="filter-input" />
               </div>
             </div>
           </fieldset>

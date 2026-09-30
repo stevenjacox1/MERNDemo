@@ -1,20 +1,17 @@
 {
-  "name": "mern-listings-aggregator",
+  "name": "real-estate-listings-aggregator",
   "version": "1.0.0",
   "description": "MERN stack listings aggregation application",
   "private": true,
   "workspaces": [
-    "server",
     "client"
   ],
   "scripts": {
     "install-all": "npm install",
-    "build": "npm run build -w server && npm run build -w client",
-    "dev": "concurrently -k \"npm run server:dotnet\" \"npm run client\"",
-    "dev:node": "concurrently -k \"npm run server\" \"npm run client\"",
-    "start": "npm start -w server",
-    "server": "npm run dev -w server",
-    "server:dotnet": "dotnet run --project server-dotnet/ListingsApi.csproj",
+    "build": "npm run build -w client && dotnet build server-dotnet/ListingsApi.csproj",
+    "dev": "concurrently -k \"npm run server\" \"npm run client\"",
+    "start": "npm run server",
+    "server": "dotnet run --project server-dotnet/ListingsApi.csproj",
     "client": "npm run dev -w client"
   },
   "devDependencies": {

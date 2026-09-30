@@ -1,11 +1,11 @@
-# MERN Stack Real Estate Listings Aggregator
+# ASP.NET Core Real Estate Listings Aggregator
 
-This project is a full-stack application using MongoDB, Express, React, and Node.js that aggregates real estate listings from multiple MLS (Multiple Listing Service) sources.
+This project is a full-stack application using ASP.NET Core and React that aggregates real estate listings from multiple MLS (Multiple Listing Service) sources.
 
 ## Project Overview
-- **Backend**: Node.js with Express API server
+- **Backend**: ASP.NET Core Web API
 - **Frontend**: React with TypeScript
-- **Database**: MongoDB (mocked with in-memory data for now)
+- **Database**: In-memory mock data or MongoDB
 - **Purpose**: Aggregate and display real estate listings from multiple MLS feeds
 
 ## Data Model
@@ -31,15 +31,16 @@ Each listing contains:
 - [x] Data schema updated to real estate model
 
 ## Key Technologies
-- Express.js for REST API
+- ASP.NET Core for REST API
+- MongoDB.Driver for optional persistence
 - React with hooks for UI
 - Axios for HTTP requests
-- Mock data service for MongoDB
 - TypeScript for type safety
 
 ## Development Commands
 - `npm run dev` - Start both server and client
-- `npm run server` - Start backend only
+- `npm run server` - Start the .NET backend only
 - `npm run client` - Start frontend only
 - `npm run build` - Build for production
+- `dotnet build server-dotnet/ListingsApi.csproj` - Build the .NET API
 

@@ -74,12 +74,12 @@
       "problemMatcher": []
     },
     {
-      "label": "Install Server Dependencies",
-      "type": "shell",
-      "command": "npm",
-      "args": ["install", "-w", "server"],
+      "label": "Restore .NET API",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["restore", "${workspaceFolder}/server-dotnet/ListingsApi.csproj"],
       "cwd": "${workspaceFolder}",
-      "problemMatcher": []
+      "problemMatcher": "$msCompile"
     },
     {
       "label": "Install Client Dependencies",
