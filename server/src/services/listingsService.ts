@@ -70,8 +70,22 @@ class InvalidFilterRangeError extends Error {
 class ListingsService {
   private static client: MongoClient;
   private static collection: Collection<StoredListing>;
+  private static useMockData = false;
+  private static mockListings: AggregatedListing[] = [];
 
   static async connect(): Promise<void> {
+    const dataSource = (process.env.DATA_SOURCE || 'mongo').toLowerCase();
+    if (dataSource === 'mock') {
+      this.useMockData = true;
+      this.mockListings = this.loadMockListings();
+      console.log('Using in-memory mock listings');
+      return;
+    }
+    if (dataSource !== 'mongo') {
+      throw new Error('DATA_SOURCE must be either "mongo" or "mock".');
+    }
+
+    this.useMockData = false;
     const client = new MongoClient(
       process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/listings'
     );
@@ -97,8 +111,26 @@ class ListingsService {
 
   static async getPaginatedListings(filter: ListingFilter = {}, requestedPage = 1) {
     this.validateRanges(filter);
-    const mongoFilter = this.buildFilter(filter);
     const pageSize = 3;
+    if (this.useMockData) {
+      const filteredListings = this.getMockListings(filter);
+      const count = filteredListings.length;
+      const totalPages = Math.ceil(count / pageSize);
+      const page = totalPages === 0
+        ? 1
+        : Math.min(Math.max(1, Math.floor(requestedPage) || 1), totalPages);
+      const offset = (page - 1) * pageSize;
+
+      return {
+        data: filteredListings.slice(offset, offset + pageSize),
+        count,
+        page,
+        pageSize,
+        totalPages
+      };
+    }
+
+    const mongoFilter = this.buildFilter(filter);
     const count = await this.collection.countDocuments(mongoFilter);
     const totalPages = Math.ceil(count / pageSize);
     const page = totalPages === 0
@@ -122,6 +154,10 @@ class ListingsService {
 
   static async getListings(filter: ListingFilter = {}): Promise<AggregatedListing[]> {
     this.validateRanges(filter);
+    if (this.useMockData) {
+      return this.getMockListings(filter);
+    }
+
     const documents = await this.collection
       .find(this.buildFilter(filter))
       .sort(this.buildSort(filter))
@@ -130,6 +166,10 @@ class ListingsService {
   }
 
   static async getListingById(id: string): Promise<AggregatedListing | undefined> {
+    if (this.useMockData) {
+      return this.mockListings.find(listing => listing.id === id);
+    }
+
     const listing = await this.collection.findOne({ _id: id });
     return listing ? this.toListing(listing) : undefined;
   }
@@ -156,6 +196,11 @@ class ListingsService {
       ...listing,
       aggregatedAt: new Date()
     };
+    if (this.useMockData) {
+      this.mockListings.push(newListing);
+      return newListing;
+    }
+
     await this.collection.insertOne(this.toDocument(newListing));
     return newListing;
   }
@@ -164,6 +209,20 @@ class ListingsService {
     id: string,
     updates: Partial<Omit<Listing, 'id'>>
   ): Promise<AggregatedListing | undefined> {
+    if (this.useMockData) {
+      const index = this.mockListings.findIndex(listing => listing.id === id);
+      if (index === -1) {
+        return undefined;
+      }
+
+      this.mockListings[index] = {
+        ...this.mockListings[index],
+        ...updates,
+        aggregatedAt: new Date()
+      };
+      return this.mockListings[index];
+    }
+
     const listing = await this.collection.findOneAndUpdate(
       { _id: id },
       { $set: { ...updates, aggregatedAt: new Date() } },
@@ -173,11 +232,24 @@ class ListingsService {
   }
 
   static async deleteListing(id: string): Promise<boolean> {
+    if (this.useMockData) {
+      const index = this.mockListings.findIndex(listing => listing.id === id);
+      if (index === -1) {
+        return false;
+      }
+      this.mockListings.splice(index, 1);
+      return true;
+    }
+
     const result = await this.collection.deleteOne({ _id: id });
     return result.deletedCount > 0;
   }
 
   static async getStats(): Promise<ListingStats> {
+    if (this.useMockData) {
+      return this.getMockStats();
+    }
+
     const [summary, sources, statuses, cities] = await Promise.all([
       this.collection.aggregate<{
         totalListings: number;
@@ -216,6 +288,98 @@ class ListingsService {
       byCity: Object.fromEntries(
         cities.map(({ _id, count }) => [`${_id.city}, ${_id.state}`, count])
       )
+    };
+  }
+
+  private static loadMockListings(): AggregatedListing[] {
+    return sampleListings.map(listing => {
+      const listedDate = new Date(listing.listedDate);
+      return {
+        ...listing,
+        listedDate,
+        status: listing.status as Listing['status'],
+        aggregatedAt: listedDate
+      };
+    });
+  }
+
+  private static getMockListings(filter: ListingFilter): AggregatedListing[] {
+    let results = this.mockListings.filter(listing => {
+      if (filter.source && listing.source !== filter.source) return false;
+      if (filter.city && listing.city.toLowerCase() !== filter.city.toLowerCase()) return false;
+      if (filter.state && listing.state.toLowerCase() !== filter.state.toLowerCase()) return false;
+      if (filter.status && listing.status !== filter.status) return false;
+      if (filter.minPrice !== undefined && listing.price < filter.minPrice) return false;
+      if (filter.maxPrice !== undefined && listing.price > filter.maxPrice) return false;
+      if (filter.minSqft !== undefined && listing.sqft < filter.minSqft) return false;
+      if (filter.maxSqft !== undefined && listing.sqft > filter.maxSqft) return false;
+      if (filter.minBeds !== undefined && listing.bedrooms < filter.minBeds) return false;
+      if (filter.maxBeds !== undefined && listing.bedrooms > filter.maxBeds) return false;
+      if (filter.minBaths !== undefined && listing.bathrooms < filter.minBaths) return false;
+      if (filter.maxBaths !== undefined && listing.bathrooms > filter.maxBaths) return false;
+
+      if (filter.targetBudget !== undefined) {
+        const rangePercent = Math.min(50, Math.max(0, filter.budgetRangePercent ?? 20));
+        if (listing.price > filter.targetBudget * (1 + rangePercent / 100)) return false;
+      }
+
+      if (filter.searchTerm) {
+        const term = filter.searchTerm.toLowerCase();
+        if (
+          !listing.address.toLowerCase().includes(term) &&
+          !listing.city.toLowerCase().includes(term) &&
+          !listing.description.toLowerCase().includes(term)
+        ) return false;
+      }
+      return true;
+    });
+
+    const sortFields: Array<keyof Pick<Listing, 'price' | 'sqft' | 'bedrooms' | 'bathrooms'>> = [];
+    if (filter.targetBudget !== undefined || filter.minPrice !== undefined || filter.maxPrice !== undefined) {
+      sortFields.push('price');
+    }
+    if (filter.minSqft !== undefined || filter.maxSqft !== undefined) sortFields.push('sqft');
+    if (filter.minBeds !== undefined || filter.maxBeds !== undefined) sortFields.push('bedrooms');
+    if (filter.minBaths !== undefined || filter.maxBaths !== undefined) sortFields.push('bathrooms');
+
+    results = results.sort((left, right) => {
+      for (const field of sortFields) {
+        const difference = right[field] - left[field];
+        if (difference !== 0) return difference;
+      }
+      const newestFirst = right.aggregatedAt.getTime() - left.aggregatedAt.getTime();
+      return newestFirst || left.id.localeCompare(right.id);
+    });
+    return results;
+  }
+
+  private static getMockStats(): ListingStats {
+    const bySource: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+    const byCity: Record<string, number> = {};
+    const totals = this.mockListings.reduce((summary, listing) => {
+      bySource[listing.source] = (bySource[listing.source] || 0) + 1;
+      byStatus[listing.status] = (byStatus[listing.status] || 0) + 1;
+      const city = `${listing.city}, ${listing.state}`;
+      byCity[city] = (byCity[city] || 0) + 1;
+      summary.price += listing.price;
+      summary.bedrooms += listing.bedrooms;
+      summary.bathrooms += listing.bathrooms;
+      summary.sqft += listing.sqft;
+      return summary;
+    }, { price: 0, bedrooms: 0, bathrooms: 0, sqft: 0 });
+
+    const count = this.mockListings.length;
+    return {
+      totalListings: count,
+      averagePrice: count ? totals.price / count : 0,
+      totalValue: totals.price,
+      averageBedrooms: count ? totals.bedrooms / count : 0,
+      averageBathrooms: count ? totals.bathrooms / count : 0,
+      averageSqft: count ? totals.sqft / count : 0,
+      bySource,
+      byStatus,
+      byCity
     };
   }
 

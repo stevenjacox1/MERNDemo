@@ -102,6 +102,7 @@ interface Listing {
    ```
    PORT=5000
    NODE_ENV=development
+   DATA_SOURCE=mongo
    MONGODB_URI=mongodb://localhost:27017/listings
    MONGODB_COLLECTION=listings
    ```
@@ -137,7 +138,9 @@ npm run client
 
 #### Optional C# and MongoDB Backend
 
-The Node/Express backend is the default and stores listings in MongoDB. Start MongoDB and run `npm run dev`; on first startup, the server seeds the collection from `server/src/sample_listings.json` if it is empty. `MONGODB_URI` accepts a local or Atlas connection string, and `MONGODB_DATABASE` and `MONGODB_COLLECTION` can override the database and collection names. The server does not begin listening until MongoDB is reachable.
+The Node/Express backend is the default. Set `DATA_SOURCE=mongo` (the default) to persist listings in MongoDB; on first startup, the server seeds an empty collection from `server/src/sample_listings.json`. `MONGODB_URI` accepts a local or Atlas connection string, and `MONGODB_DATABASE` and `MONGODB_COLLECTION` can override the database and collection names. The server does not begin listening until MongoDB is reachable in this mode.
+
+Set `DATA_SOURCE=mock` in `server/.env` to load the same sample listings directly into memory without connecting to MongoDB. Mock-mode changes made through create, update, or delete endpoints last only until the server restarts.
 
 To run the optional ASP.NET Core backend instead, start MongoDB, then run:
 
@@ -145,7 +148,7 @@ To run the optional ASP.NET Core backend instead, start MongoDB, then run:
 dotnet run --project server-dotnet/ListingsApi.csproj
 ```
 
-The C# API listens on `http://localhost:5001` by default and implements the same `/api` routes. If the MongoDB collection is empty, it seeds listings from `server/src/sample_listings.json`. To point the React client at it, set `REACT_APP_API_URL=http://localhost:5001/api` in `client/.env` and restart the client. This C# backend runs separately; the root npm scripts continue to start Node/Express.
+The C# API implements the same `/api` routes and defaults to MongoDB. Its `DataSource` setting in `server-dotnet/appsettings.json` can be `mongo` or `mock`; setting it to `mock` loads `server/src/sample_listings.json` into memory and does not connect to MongoDB. You can override the setting with the `DATA_SOURCE` environment variable. To point the React client at it, set `REACT_APP_API_URL` in `client/.env` to the API's actual URL and restart the client. This C# backend runs separately; the root npm scripts continue to start Node/Express.
 
 #### Production Build
 
@@ -234,8 +237,8 @@ curl -X POST http://localhost:5000/api/listings \
 - **CSS3**: Styling
 
 ### Database
-- Currently uses in-memory mock data
-- Can be replaced with MongoDB
+- MongoDB is the default data source
+- Optional in-memory mock data is selected with `DATA_SOURCE=mock`
 
 ## Sample Data
 
@@ -257,13 +260,13 @@ The sample JSON contains 12 listings from MLS_A and MLS_B across six cities in V
 ## Development Notes
 
 - The project uses workspaces for easier dependency management
-- The mock database persists only during the current session
+- Mock-mode data and changes persist only during the current server session
 - TypeScript is configured for both client and server
 - Listings include geolocation coordinates for future mapping features
 
 ## Future Enhancements
 
-- [ ] Integrate real MongoDB database
+- [ ] Add indexes for common listing queries
 - [ ] Add user authentication and saved listings
 - [ ] Implement property search map view
 - [ ] Add price history tracking

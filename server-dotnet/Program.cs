@@ -6,6 +6,13 @@ using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 var mongoSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>() ?? new MongoDbSettings();
+var dataSource = (Environment.GetEnvironmentVariable("DATA_SOURCE") ?? builder.Configuration["DataSource"] ?? "mongo")
+    .Trim()
+    .ToLowerInvariant();
+if (dataSource is not ("mongo" or "mock"))
+{
+    throw new InvalidOperationException("DATA_SOURCE must be either 'mongo' or 'mock'.");
+}
 
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
 {
@@ -14,12 +21,17 @@ if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URL
 }
 
 builder.Services.AddSingleton(mongoSettings);
-builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings.ConnectionString));
-builder.Services.AddSingleton(serviceProvider =>
-    serviceProvider.GetRequiredService<IMongoClient>()
-        .GetDatabase(mongoSettings.DatabaseName)
-        .GetCollection<Listing>(mongoSettings.CollectionName));
-builder.Services.AddSingleton<ListingsService>();
+if (dataSource == "mongo")
+{
+    builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings.ConnectionString));
+    builder.Services.AddSingleton<IMongoCollection<Listing>>(serviceProvider =>
+        serviceProvider.GetRequiredService<IMongoClient>()
+            .GetDatabase(mongoSettings.DatabaseName)
+            .GetCollection<Listing>(mongoSettings.CollectionName));
+}
+builder.Services.AddSingleton(serviceProvider => new ListingsService(
+    dataSource == "mongo" ? serviceProvider.GetRequiredService<IMongoCollection<Listing>>() : null,
+    dataSource == "mock"));
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
@@ -36,6 +48,7 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 
 var app = builder.Build();
 app.UseCors();
+Console.WriteLine(dataSource == "mock" ? "Data source: in-memory mock listings" : "Data source: MongoDB");
 
 var listingsService = app.Services.GetRequiredService<ListingsService>();
 var sampleDataPath = Path.Combine(AppContext.BaseDirectory, "sample_listings.json");
