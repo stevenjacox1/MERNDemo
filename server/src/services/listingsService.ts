@@ -1,14 +1,15 @@
-// Mock database service for real estate listings aggregation
-// This simulates MongoDB operations with in-memory data
+import { randomUUID } from 'crypto';
+import { Collection, Filter, MongoClient } from 'mongodb';
+import sampleListings from '../sample_listings.json';
 
 export interface Listing {
   id: string;
-  source: string; // e.g., "MLS_A", "MLS_B"
-  address: string; // Free-text street address, not normalized
+  source: string;
+  address: string;
   city: string;
   state: string;
   zip: string;
-  price: number; // USD, list price
+  price: number;
   bedrooms: number;
   bathrooms: number;
   sqft: number;
@@ -16,11 +17,45 @@ export interface Listing {
   longitude: number;
   listedDate: Date;
   status: 'active' | 'pending' | 'sold';
-  description: string; // Free text, searchable
+  description: string;
 }
 
 export interface AggregatedListing extends Listing {
   aggregatedAt: Date;
+}
+
+export interface ListingFilter {
+  source?: string;
+  city?: string;
+  state?: string;
+  status?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minSqft?: number;
+  maxSqft?: number;
+  minBeds?: number;
+  maxBeds?: number;
+  minBaths?: number;
+  maxBaths?: number;
+  targetBudget?: number;
+  budgetRangePercent?: number;
+  searchTerm?: string;
+}
+
+interface StoredListing extends Omit<AggregatedListing, 'id'> {
+  _id: string;
+}
+
+interface ListingStats {
+  totalListings: number;
+  averagePrice: number;
+  totalValue: number;
+  averageBedrooms: number;
+  averageBathrooms: number;
+  averageSqft: number;
+  bySource: Record<string, number>;
+  byStatus: Record<string, number>;
+  byCity: Record<string, number>;
 }
 
 class InvalidFilterRangeError extends Error {
@@ -32,242 +67,52 @@ class InvalidFilterRangeError extends Error {
   }
 }
 
-// In-memory data store
-let listingsDatabase: AggregatedListing[] = [
-  {
-    id: 'A1',
-    source: 'MLS_A',
-    address: '123 Main St, Apt 4B',
-    city: 'Springfield',
-    state: 'VA',
-    zip: '22150',
-    price: 450000,
-    bedrooms: 2,
-    bathrooms: 1.5,
-    sqft: 980,
-    latitude: 38.7893,
-    longitude: -77.1873,
-    listedDate: new Date('2026-08-29'),
-    status: 'active',
-    description: 'Bright top-floor condo near shops and transit. Pet friendly.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'B7',
-    source: 'MLS_B',
-    address: '123 Main Street, Unit 4B',
-    city: 'Springfield',
-    state: 'VA',
-    zip: '22150',
-    price: 452000,
-    bedrooms: 2,
-    bathrooms: 1.5,
-    sqft: 980,
-    latitude: 38.7893,
-    longitude: -77.1873,
-    listedDate: new Date('2026-08-27'),
-    status: 'active',
-    description: 'Top floor condo, walk to shopping. Pets allowed.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'A2',
-    source: 'MLS_A',
-    address: '456 Oak Ave',
-    city: 'Springfield',
-    state: 'VA',
-    zip: '22150',
-    price: 525000,
-    bedrooms: 3,
-    bathrooms: 2.0,
-    sqft: 1450,
-    latitude: 38.7791,
-    longitude: -77.1901,
-    listedDate: new Date('2026-09-02'),
-    status: 'active',
-    description: 'Updated kitchen, fenced yard, close to schools.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'B8',
-    source: 'MLS_B',
-    address: '456 Oak Avenue',
-    city: 'Springfield',
-    state: 'VA',
-    zip: '22151',
-    price: 527500,
-    bedrooms: 3,
-    bathrooms: 2.0,
-    sqft: 1450,
-    latitude: 38.7791,
-    longitude: -77.1901,
-    listedDate: new Date('2026-08-30'),
-    status: 'active',
-    description: 'Renovated kitchen, fenced backyard, near schools.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'A3',
-    source: 'MLS_A',
-    address: '789 Pine Rd',
-    city: 'Fairfax',
-    state: 'VA',
-    zip: '22030',
-    price: 399000,
-    bedrooms: 2,
-    bathrooms: 1.0,
-    sqft: 850,
-    latitude: 38.8462,
-    longitude: -77.3064,
-    listedDate: new Date('2026-09-01'),
-    status: 'active',
-    description: 'Cozy starter home, no pets.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'B9',
-    source: 'MLS_B',
-    address: '789 Pine Rd',
-    city: 'Fairfax',
-    state: 'VA',
-    zip: '22030',
-    price: 399500,
-    bedrooms: 2,
-    bathrooms: 1.0,
-    sqft: 850,
-    latitude: 38.8462,
-    longitude: -77.3064,
-    listedDate: new Date('2026-08-25'),
-    status: 'active',
-    description: 'Cozy starter home, pets not permitted.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'A4',
-    source: 'MLS_A',
-    address: '22 Birch Ln',
-    city: 'Reston',
-    state: 'VA',
-    zip: '20190',
-    price: 610000,
-    bedrooms: 4,
-    bathrooms: 3.0,
-    sqft: 2100,
-    latitude: 38.9586,
-    longitude: -77.3570,
-    listedDate: new Date('2026-09-03'),
-    status: 'active',
-    description: 'Spacious family home near Reston Town Center. Pets welcome.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'B10',
-    source: 'MLS_B',
-    address: '100 Maple Dr',
-    city: 'Reston',
-    state: 'VA',
-    zip: '20190',
-    price: 585000,
-    bedrooms: 3,
-    bathrooms: 2.5,
-    sqft: 1900,
-    latitude: 38.9601,
-    longitude: -77.3499,
-    listedDate: new Date('2026-08-20'),
-    status: 'active',
-    description: 'Townhome with 2-car garage, community pool.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'A5',
-    source: 'MLS_A',
-    address: '55 Elm Ct',
-    city: 'Vienna',
-    state: 'VA',
-    zip: '22180',
-    price: 470000,
-    bedrooms: 3,
-    bathrooms: 2.0,
-    sqft: 1300,
-    latitude: 38.9012,
-    longitude: -77.2653,
-    listedDate: new Date('2026-09-04'),
-    status: 'active',
-    description: 'Quiet cul-de-sac, walkable to Metro. No pets.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'B11',
-    source: 'MLS_B',
-    address: '55 Elm Court',
-    city: 'Vienna',
-    state: 'VA',
-    zip: '22180',
-    price: 465000,
-    bedrooms: 3,
-    bathrooms: 2.0,
-    sqft: 1300,
-    latitude: 38.9012,
-    longitude: -77.2653,
-    listedDate: new Date('2026-08-15'),
-    status: 'active',
-    description: 'Peaceful street, close to Metro. Pet restrictions apply.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'A6',
-    source: 'MLS_A',
-    address: '300 Cedar Blvd',
-    city: 'Manassas',
-    state: 'VA',
-    zip: '20110',
-    price: 415000,
-    bedrooms: 3,
-    bathrooms: 2.0,
-    sqft: 1600,
-    latitude: 38.7509,
-    longitude: -77.4753,
-    listedDate: new Date('2026-08-10'),
-    status: 'active',
-    description: 'Split-level home, large driveway, pets allowed.',
-    aggregatedAt: new Date()
-  },
-  {
-    id: 'A7',
-    source: 'MLS_A',
-    address: '42 Willow Way',
-    city: 'Chantilly',
-    state: 'VA',
-    zip: '20151',
-    price: 540000,
-    bedrooms: 4,
-    bathrooms: 2.5,
-    sqft: 1950,
-    latitude: 38.8909,
-    longitude: -77.4316,
-    listedDate: new Date('2026-07-28'),
-    status: 'pending',
-    description: 'Corner lot, recently painted, no pets due to HOA.',
-    aggregatedAt: new Date()
-  }
-];
-
 class ListingsService {
-  static getPaginatedListings(
-    filter: Parameters<typeof ListingsService.getListings>[0],
-    requestedPage: number
-  ): { data: AggregatedListing[]; count: number; page: number; pageSize: number; totalPages: number } {
+  private static client: MongoClient;
+  private static collection: Collection<StoredListing>;
+
+  static async connect(): Promise<void> {
+    const client = new MongoClient(
+      process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/listings'
+    );
+
+    try {
+      await client.connect();
+      const database = client.db(process.env.MONGODB_DATABASE || undefined);
+      this.client = client;
+      this.collection = database.collection<StoredListing>(
+        process.env.MONGODB_COLLECTION || 'listings'
+      );
+      await this.seedIfEmpty();
+      console.log(`Connected to MongoDB database "${database.databaseName}"`);
+    } catch (error) {
+      await client.close();
+      throw error;
+    }
+  }
+
+  static async close(): Promise<void> {
+    await this.client?.close();
+  }
+
+  static async getPaginatedListings(filter: ListingFilter = {}, requestedPage = 1) {
+    this.validateRanges(filter);
+    const mongoFilter = this.buildFilter(filter);
     const pageSize = 3;
-    const filteredListings = this.getListings(filter);
-    const count = filteredListings.length;
+    const count = await this.collection.countDocuments(mongoFilter);
     const totalPages = Math.ceil(count / pageSize);
     const page = totalPages === 0
       ? 1
       : Math.min(Math.max(1, Math.floor(requestedPage) || 1), totalPages);
-    const offset = (page - 1) * pageSize;
+    const documents = await this.collection
+      .find(mongoFilter)
+      .sort(this.buildSort(filter))
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .toArray();
 
     return {
-      data: filteredListings.slice(offset, offset + pageSize),
+      data: documents.map(this.toListing),
       count,
       page,
       pageSize,
@@ -275,254 +120,217 @@ class ListingsService {
     };
   }
 
-  /**
-   * Get all listings with optional filtering
-   */
-  static getListings(
-    filter?: Partial<{
-      source: string;
-      city: string;
-      state: string;
-      status: string;
-      minPrice: number;
-      maxPrice: number;
-      minSqft: number;
-      maxSqft: number;
-      minBeds: number;
-      maxBeds: number;
-      minBaths: number;
-      maxBaths: number;
-      targetBudget: number;
-      budgetRangePercent: number;
-      searchTerm: string;
-    }>
-  ): AggregatedListing[] {
-    const ranges = [
-      { field: 'price', min: filter?.minPrice, max: filter?.maxPrice },
-      { field: 'square feet', min: filter?.minSqft, max: filter?.maxSqft },
-      { field: 'bedrooms', min: filter?.minBeds, max: filter?.maxBeds },
-      { field: 'bathrooms', min: filter?.minBaths, max: filter?.maxBaths }
+  static async getListings(filter: ListingFilter = {}): Promise<AggregatedListing[]> {
+    this.validateRanges(filter);
+    const documents = await this.collection
+      .find(this.buildFilter(filter))
+      .sort(this.buildSort(filter))
+      .toArray();
+    return documents.map(this.toListing);
+  }
+
+  static async getListingById(id: string): Promise<AggregatedListing | undefined> {
+    const listing = await this.collection.findOne({ _id: id });
+    return listing ? this.toListing(listing) : undefined;
+  }
+
+  static getListingsBySource(source: string): Promise<AggregatedListing[]> {
+    return this.getListings({ source });
+  }
+
+  static getListingsByCity(city: string): Promise<AggregatedListing[]> {
+    return this.getListings({ city });
+  }
+
+  static getListingsByStatus(status: string): Promise<AggregatedListing[]> {
+    return this.getListings({ status });
+  }
+
+  static getListingsByState(state: string): Promise<AggregatedListing[]> {
+    return this.getListings({ state });
+  }
+
+  static async addListing(listing: Omit<Listing, 'id'>): Promise<AggregatedListing> {
+    const newListing: AggregatedListing = {
+      id: `${listing.source}_${randomUUID()}`,
+      ...listing,
+      aggregatedAt: new Date()
+    };
+    await this.collection.insertOne(this.toDocument(newListing));
+    return newListing;
+  }
+
+  static async updateListing(
+    id: string,
+    updates: Partial<Omit<Listing, 'id'>>
+  ): Promise<AggregatedListing | undefined> {
+    const listing = await this.collection.findOneAndUpdate(
+      { _id: id },
+      { $set: { ...updates, aggregatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+    return listing ? this.toListing(listing) : undefined;
+  }
+
+  static async deleteListing(id: string): Promise<boolean> {
+    const result = await this.collection.deleteOne({ _id: id });
+    return result.deletedCount > 0;
+  }
+
+  static async getStats(): Promise<ListingStats> {
+    const [summary, sources, statuses, cities] = await Promise.all([
+      this.collection.aggregate<{
+        totalListings: number;
+        averagePrice: number;
+        totalValue: number;
+        averageBedrooms: number;
+        averageBathrooms: number;
+        averageSqft: number;
+      }>([{
+        $group: {
+          _id: null,
+          totalListings: { $sum: 1 },
+          averagePrice: { $avg: '$price' },
+          totalValue: { $sum: '$price' },
+          averageBedrooms: { $avg: '$bedrooms' },
+          averageBathrooms: { $avg: '$bathrooms' },
+          averageSqft: { $avg: '$sqft' }
+        }
+      }]).next(),
+      this.groupCount('source'),
+      this.groupCount('status'),
+      this.collection.aggregate<{ _id: { city: string; state: string }; count: number }>([
+        { $group: { _id: { city: '$city', state: '$state' }, count: { $sum: 1 } } }
+      ]).toArray()
+    ]);
+
+    return {
+      totalListings: summary?.totalListings ?? 0,
+      averagePrice: summary?.averagePrice ?? 0,
+      totalValue: summary?.totalValue ?? 0,
+      averageBedrooms: summary?.averageBedrooms ?? 0,
+      averageBathrooms: summary?.averageBathrooms ?? 0,
+      averageSqft: summary?.averageSqft ?? 0,
+      bySource: sources,
+      byStatus: statuses,
+      byCity: Object.fromEntries(
+        cities.map(({ _id, count }) => [`${_id.city}, ${_id.state}`, count])
+      )
+    };
+  }
+
+  private static async seedIfEmpty(): Promise<void> {
+    if (await this.collection.countDocuments({}, { limit: 1 }) > 0) {
+      return;
+    }
+
+    const documents = sampleListings.map(listing => {
+      const listedDate = new Date(listing.listedDate);
+      return this.toDocument({
+        ...listing,
+        listedDate,
+        status: listing.status as Listing['status'],
+        aggregatedAt: listedDate
+      });
+    });
+
+    if (documents.length > 0) {
+      await this.collection.insertMany(documents, { ordered: false });
+    }
+  }
+
+  private static async groupCount(field: 'source' | 'status'): Promise<Record<string, number>> {
+    const groups = await this.collection.aggregate<{ _id: string; count: number }>([
+      { $group: { _id: `$${field}`, count: { $sum: 1 } } }
+    ]).toArray();
+    return Object.fromEntries(groups.map(group => [group._id, group.count]));
+  }
+
+  private static buildFilter(filter: ListingFilter): Filter<StoredListing> {
+    const query: Record<string, unknown> = {};
+    const ranges: Array<[string, number | undefined, number | undefined]> = [
+      ['price', filter.minPrice, filter.maxPrice],
+      ['sqft', filter.minSqft, filter.maxSqft],
+      ['bedrooms', filter.minBeds, filter.maxBeds],
+      ['bathrooms', filter.minBaths, filter.maxBaths]
     ];
 
+    for (const [field, min, max] of ranges) {
+      if (min !== undefined || max !== undefined) {
+        query[field] = {
+          ...(min !== undefined && { $gte: min }),
+          ...(max !== undefined && { $lte: max })
+        };
+      }
+    }
+
+    if (filter.source) query.source = filter.source;
+    if (filter.status) query.status = filter.status;
+    if (filter.city) query.city = this.exactMatch(filter.city);
+    if (filter.state) query.state = this.exactMatch(filter.state);
+
+    if (filter.targetBudget !== undefined) {
+      const rangePercent = Math.min(50, Math.max(0, filter.budgetRangePercent ?? 20));
+      const maxPrice = filter.targetBudget * (1 + rangePercent / 100);
+      const existingPrice = query.price as Record<string, number> | undefined;
+      query.price = { ...existingPrice, $lte: Math.min(existingPrice?.$lte ?? Infinity, maxPrice) };
+    }
+
+    if (filter.searchTerm) {
+      const expression = new RegExp(this.escapeRegex(filter.searchTerm), 'i');
+      query.$or = [
+        { address: expression },
+        { city: expression },
+        { description: expression }
+      ];
+    }
+
+    return query as Filter<StoredListing>;
+  }
+
+  private static buildSort(filter: ListingFilter): Record<string, 1 | -1> {
+    const sort: Record<string, 1 | -1> = {};
+    if (filter.targetBudget !== undefined || filter.minPrice !== undefined || filter.maxPrice !== undefined) {
+      sort.price = -1;
+    }
+    if (filter.minSqft !== undefined || filter.maxSqft !== undefined) sort.sqft = -1;
+    if (filter.minBeds !== undefined || filter.maxBeds !== undefined) sort.bedrooms = -1;
+    if (filter.minBaths !== undefined || filter.maxBaths !== undefined) sort.bathrooms = -1;
+    sort.aggregatedAt = -1;
+    sort._id = 1;
+    return sort;
+  }
+
+  private static exactMatch(value: string): RegExp {
+    return new RegExp(`^${this.escapeRegex(value)}$`, 'i');
+  }
+
+  private static escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private static validateRanges(filter: ListingFilter): void {
+    const ranges = [
+      { field: 'price', min: filter.minPrice, max: filter.maxPrice },
+      { field: 'square feet', min: filter.minSqft, max: filter.maxSqft },
+      { field: 'bedrooms', min: filter.minBeds, max: filter.maxBeds },
+      { field: 'bathrooms', min: filter.minBaths, max: filter.maxBaths }
+    ];
     for (const range of ranges) {
       if (range.min !== undefined && range.max !== undefined && range.min > range.max) {
         throw new InvalidFilterRangeError(range.field);
       }
     }
-
-    let results = [...listingsDatabase];
-
-    if (filter?.source) {
-      results = results.filter(l => l.source === filter.source);
-    }
-
-    if (filter?.city) {
-      results = results.filter(l => l.city.toLowerCase() === filter.city!.toLowerCase());
-    }
-
-    if (filter?.state) {
-      results = results.filter(l => l.state.toUpperCase() === filter.state!.toUpperCase());
-    }
-
-    if (filter?.status) {
-      results = results.filter(l => l.status === filter.status);
-    }
-
-    if (filter?.minPrice !== undefined) {
-      results = results.filter(l => l.price >= filter.minPrice!);
-    }
-
-    if (filter?.maxPrice !== undefined) {
-      results = results.filter(l => l.price <= filter.maxPrice!);
-    }
-
-    if (filter?.minSqft !== undefined) {
-      results = results.filter(l => l.sqft >= filter.minSqft!);
-    }
-
-    if (filter?.maxSqft !== undefined) {
-      results = results.filter(l => l.sqft <= filter.maxSqft!);
-    }
-
-    if (filter?.minBeds !== undefined) {
-      results = results.filter(l => l.bedrooms >= filter.minBeds!);
-    }
-
-    if (filter?.maxBeds !== undefined) {
-      results = results.filter(l => l.bedrooms <= filter.maxBeds!);
-    }
-
-    if (filter?.minBaths !== undefined) {
-      results = results.filter(l => l.bathrooms >= filter.minBaths!);
-    }
-
-    if (filter?.maxBaths !== undefined) {
-      results = results.filter(l => l.bathrooms <= filter.maxBaths!);
-    }
-
-    if (filter?.searchTerm) {
-      const term = filter.searchTerm.toLowerCase();
-      results = results.filter(l =>
-        l.address.toLowerCase().includes(term) ||
-        l.city.toLowerCase().includes(term) ||
-        l.description.toLowerCase().includes(term)
-      );
-    }
-
-    const newestFirst = (a: AggregatedListing, b: AggregatedListing) =>
-      b.aggregatedAt.getTime() - a.aggregatedAt.getTime();
-    const sortFields: Array<keyof Pick<Listing, 'price' | 'sqft' | 'bedrooms' | 'bathrooms'>> = [];
-    if (
-      filter?.targetBudget !== undefined ||
-      filter?.minPrice !== undefined ||
-      filter?.maxPrice !== undefined
-    ) {
-      sortFields.push('price');
-    }
-    if (filter?.minSqft !== undefined || filter?.maxSqft !== undefined) {
-      sortFields.push('sqft');
-    }
-    if (filter?.minBeds !== undefined || filter?.maxBeds !== undefined) {
-      sortFields.push('bedrooms');
-    }
-    if (filter?.minBaths !== undefined || filter?.maxBaths !== undefined) {
-      sortFields.push('bathrooms');
-    }
-
-    const sortedResults = results.sort((a, b) => {
-      for (const field of sortFields) {
-        const difference = b[field] - a[field];
-        if (difference !== 0) {
-          return difference;
-        }
-      }
-      return newestFirst(a, b);
-    });
-
-    if (filter?.targetBudget === undefined) {
-      return sortedResults;
-    }
-
-    const rangePercent = Math.min(50, Math.max(0, filter.budgetRangePercent ?? 20));
-    const minimumTargetPrice = filter.targetBudget * (1 - rangePercent / 100);
-    const maximumTargetPrice = filter.targetBudget * (1 + rangePercent / 100);
-
-    return sortedResults.filter(listing => listing.price <= maximumTargetPrice);
   }
 
-  /**
-   * Get a single listing by ID
-   */
-  static getListingById(id: string): AggregatedListing | undefined {
-    return listingsDatabase.find(l => l.id === id);
+  private static toDocument(listing: AggregatedListing): StoredListing {
+    const { id, ...fields } = listing;
+    return { ...fields, _id: id };
   }
 
-  /**
-   * Get listings by source
-   */
-  static getListingsBySource(source: string): AggregatedListing[] {
-    return this.getListings({ source });
-  }
-
-  /**
-   * Get listings by city
-   */
-  static getListingsByCity(city: string): AggregatedListing[] {
-    return this.getListings({ city });
-  }
-
-  /**
-   * Get listings by status
-   */
-  static getListingsByStatus(status: string): AggregatedListing[] {
-    return this.getListings({ status });
-  }
-
-  /**
-   * Get listings by state
-   */
-  static getListingsByState(state: string): AggregatedListing[] {
-    return this.getListings({ state });
-  }
-
-  /**
-   * Add a new listing
-   */
-  static addListing(listing: Omit<Listing, 'id'>): AggregatedListing {
-    const newListing: AggregatedListing = {
-      id: `${listing.source}_${Date.now()}`,
-      ...listing,
-      aggregatedAt: new Date()
-    };
-    listingsDatabase.push(newListing);
-    return newListing;
-  }
-
-  /**
-   * Update a listing
-   */
-  static updateListing(id: string, updates: Partial<Listing>): AggregatedListing | undefined {
-    const index = listingsDatabase.findIndex(l => l.id === id);
-    if (index !== -1) {
-      listingsDatabase[index] = {
-        ...listingsDatabase[index],
-        ...updates,
-        aggregatedAt: new Date()
-      };
-      return listingsDatabase[index];
-    }
-    return undefined;
-  }
-
-  /**
-   * Delete a listing
-   */
-  static deleteListing(id: string): boolean {
-    const index = listingsDatabase.findIndex(l => l.id === id);
-    if (index !== -1) {
-      listingsDatabase.splice(index, 1);
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Get aggregation statistics
-   */
-  static getStats() {
-    const bySource: Record<string, number> = {};
-    const byStatus: Record<string, number> = {};
-    const byCity: Record<string, number> = {};
-    let totalValue = 0;
-    let avgBedrooms = 0;
-    let avgBathrooms = 0;
-    let avgSqft = 0;
-
-    listingsDatabase.forEach(listing => {
-      bySource[listing.source] = (bySource[listing.source] || 0) + 1;
-      byStatus[listing.status] = (byStatus[listing.status] || 0) + 1;
-      const cityKey = `${listing.city}, ${listing.state}`;
-      byCity[cityKey] = (byCity[cityKey] || 0) + 1;
-      totalValue += listing.price;
-      avgBedrooms += listing.bedrooms;
-      avgBathrooms += listing.bathrooms;
-      avgSqft += listing.sqft;
-    });
-
-    const count = listingsDatabase.length;
-    const avgPrice = count > 0 ? totalValue / count : 0;
-
-    return {
-      totalListings: count,
-      averagePrice: avgPrice,
-      totalValue,
-      averageBedrooms: count > 0 ? avgBedrooms / count : 0,
-      averageBathrooms: count > 0 ? avgBathrooms / count : 0,
-      averageSqft: count > 0 ? avgSqft / count : 0,
-      bySource,
-      byStatus,
-      byCity
-    };
+  private static toListing(document: StoredListing): AggregatedListing {
+    const { _id, ...fields } = document;
+    return { ...fields, id: _id };
   }
 }
 

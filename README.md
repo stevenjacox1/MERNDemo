@@ -103,6 +103,7 @@ interface Listing {
    PORT=5000
    NODE_ENV=development
    MONGODB_URI=mongodb://localhost:27017/listings
+   MONGODB_COLLECTION=listings
    ```
 
 2. **Client .env file** (`client/.env`):
@@ -136,7 +137,9 @@ npm run client
 
 #### Optional C# and MongoDB Backend
 
-The Node/Express backend remains the default. To run the ASP.NET Core backend instead, start MongoDB, then run:
+The Node/Express backend is the default and stores listings in MongoDB. Start MongoDB and run `npm run dev`; on first startup, the server seeds the collection from `server/src/sample_listings.json` if it is empty. `MONGODB_URI` accepts a local or Atlas connection string, and `MONGODB_DATABASE` and `MONGODB_COLLECTION` can override the database and collection names. The server does not begin listening until MongoDB is reachable.
+
+To run the optional ASP.NET Core backend instead, start MongoDB, then run:
 
 ```bash
 dotnet run --project server-dotnet/ListingsApi.csproj

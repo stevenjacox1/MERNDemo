@@ -4,7 +4,7 @@ import ListingsService from '../services/listingsService';
 const router = Router();
 
 // Get all listings with optional filters
-router.get('/', (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
     const { 
       source, 
@@ -25,7 +25,7 @@ router.get('/', (req: Request, res: Response) => {
       page
     } = req.query;
 
-    const listings = ListingsService.getPaginatedListings({
+    const listings = await ListingsService.getPaginatedListings({
       source: source ? String(source) : undefined,
       city: city ? String(city) : undefined,
       state: state ? String(state) : undefined,
@@ -63,9 +63,9 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 // Get a specific listing by ID
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const listing = ListingsService.getListingById(req.params.id);
+    const listing = await ListingsService.getListingById(req.params.id);
 
     if (!listing) {
       return res.status(404).json({
@@ -87,9 +87,9 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 // Get listings by source
-router.get('/source/:source', (req: Request, res: Response) => {
+router.get('/source/:source', async (req: Request, res: Response) => {
   try {
-    const listings = ListingsService.getListingsBySource(req.params.source);
+    const listings = await ListingsService.getListingsBySource(req.params.source);
 
     res.json({
       success: true,
@@ -105,9 +105,9 @@ router.get('/source/:source', (req: Request, res: Response) => {
 });
 
 // Get listings by city
-router.get('/city/:city', (req: Request, res: Response) => {
+router.get('/city/:city', async (req: Request, res: Response) => {
   try {
-    const listings = ListingsService.getListingsByCity(req.params.city);
+    const listings = await ListingsService.getListingsByCity(req.params.city);
 
     res.json({
       success: true,
@@ -123,9 +123,9 @@ router.get('/city/:city', (req: Request, res: Response) => {
 });
 
 // Get listings by status
-router.get('/status/:status', (req: Request, res: Response) => {
+router.get('/status/:status', async (req: Request, res: Response) => {
   try {
-    const listings = ListingsService.getListingsByStatus(req.params.status);
+    const listings = await ListingsService.getListingsByStatus(req.params.status);
 
     res.json({
       success: true,
@@ -141,9 +141,9 @@ router.get('/status/:status', (req: Request, res: Response) => {
 });
 
 // Get listings by state
-router.get('/state/:state', (req: Request, res: Response) => {
+router.get('/state/:state', async (req: Request, res: Response) => {
   try {
-    const listings = ListingsService.getListingsByState(req.params.state);
+    const listings = await ListingsService.getListingsByState(req.params.state);
 
     res.json({
       success: true,
@@ -159,7 +159,7 @@ router.get('/state/:state', (req: Request, res: Response) => {
 });
 
 // Create a new listing
-router.post('/', (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { 
       source, 
@@ -186,7 +186,7 @@ router.post('/', (req: Request, res: Response) => {
       });
     }
 
-    const newListing = ListingsService.addListing({
+    const newListing = await ListingsService.addListing({
       source,
       address,
       city,
@@ -216,9 +216,9 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 // Update a listing
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const updatedListing = ListingsService.updateListing(req.params.id, req.body);
+    const updatedListing = await ListingsService.updateListing(req.params.id, req.body);
 
     if (!updatedListing) {
       return res.status(404).json({
@@ -240,9 +240,9 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 // Delete a listing
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const deleted = ListingsService.deleteListing(req.params.id);
+    const deleted = await ListingsService.deleteListing(req.params.id);
 
     if (!deleted) {
       return res.status(404).json({
@@ -264,9 +264,9 @@ router.delete('/:id', (req: Request, res: Response) => {
 });
 
 // Get aggregation statistics
-router.get('/stats/overview', (req: Request, res: Response) => {
+router.get('/stats/overview', async (req: Request, res: Response) => {
   try {
-    const stats = ListingsService.getStats();
+    const stats = await ListingsService.getStats();
 
     res.json({
       success: true,
