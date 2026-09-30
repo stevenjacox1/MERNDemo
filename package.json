@@ -1,0 +1,24 @@
+{
+  "name": "mern-listings-aggregator",
+  "version": "1.0.0",
+  "description": "MERN stack listings aggregation application",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "install-all": "npm install",
+    "build": "npm run build -w server && npm run build -w client",
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+    "start": "npm start -w server",
+    "server": "npm run dev -w server",
+    "client": "npm run dev -w client"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

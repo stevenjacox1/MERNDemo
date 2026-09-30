@@ -1,0 +1,70 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Development Servers",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "problemMatcher": [],
+      "isBackground": true,
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Start Backend Server",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "server"],
+      "cwd": "${workspaceFolder}",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Start Frontend Client",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "client"],
+      "cwd": "${workspaceFolder}",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Build Project",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "build"],
+      "cwd": "${workspaceFolder}",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build"
+      }
+    },
+    {
+      "label": "Install Dependencies",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "cwd": "${workspaceFolder}",
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Server Dependencies",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install", "-w", "server"],
+      "cwd": "${workspaceFolder}",
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Client Dependencies",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install", "-w", "client"],
+      "cwd": "${workspaceFolder}",
+      "problemMatcher": []
+    }
+  ]
+}

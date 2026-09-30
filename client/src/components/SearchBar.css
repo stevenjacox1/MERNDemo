@@ -1,0 +1,241 @@
+.search-bar {
+  background: #171d20;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #303a3e;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+  margin-bottom: 14px;
+}
+
+.search-container {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 10px;
+}
+
+.filter-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.filter-control label {
+  color: #c3d0d1;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.search-field,
+.budget-price-row,
+.button-group,
+.range-groups {
+  grid-column: 1 / -1;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #3a484c;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: border-color 0.3s;
+  background: #101619;
+  color: #edf4f2;
+}
+
+.search-input:focus,
+.filter-select:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: #46b9a2;
+  box-shadow: 0 0 0 3px rgba(70, 185, 162, 0.16);
+}
+
+.filter-row {
+  display: contents;
+}
+
+.budget-price-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.range-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.range-group {
+  min-width: 0;
+  margin: 0;
+  padding: 7px 8px 8px;
+  border: 1px solid #3a484c;
+  border-radius: 6px;
+}
+
+.range-group legend {
+  padding: 0 6px;
+  color: #c3d0d1;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.range-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.range-error {
+  display: block;
+  color: #ff7777;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.target-budget-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  align-items: end;
+  gap: 8px;
+}
+
+.budget-range-control {
+  min-height: 40px;
+}
+
+.budget-range {
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  accent-color: #46b9a2;
+  cursor: pointer;
+}
+
+.budget-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.filter-select,
+.filter-input {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid #3a484c;
+  border-radius: 6px;
+  font-size: 13px;
+  background-color: #101619;
+  color: #edf4f2;
+  transition: border-color 0.3s;
+}
+
+.filter-select option {
+  background: #171d20;
+  color: #edf4f2;
+}
+
+.filter-input[aria-invalid="true"] {
+  border-color: #d9535d;
+}
+
+.filter-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 20px;
+  padding-right: 32px;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: #238e7b;
+  color: #f4fffc;
+  flex: 0 0 auto;
+  min-width: 120px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #2ba58e;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(43, 165, 142, 0.24);
+}
+
+.btn-secondary {
+  background-color: #303b3f;
+  color: #e1e9e8;
+  flex: 0 0 auto;
+  min-width: 100px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #3c494d;
+}
+
+@media (max-width: 900px) {
+  .search-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .range-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .button-group {
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    flex: 1 1 auto;
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 560px) {
+  .search-container {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .range-groups {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-price-row {
+    grid-template-columns: 1fr;
+  }
+
+  .target-budget-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  }
+}
+
