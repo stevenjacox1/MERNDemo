@@ -12,10 +12,11 @@
     "dev": "concurrently -k \"npm run server\" \"npm run client\"",
     "start": "npm run server",
     "server": "dotnet run --project server-dotnet/ListingsApi.csproj",
-    "client": "npm run dev -w client"
+    "client": "wait-on -t 120000 tcp:5001 && npm run dev -w client"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "wait-on": "^9.5.1"
   },
   "engines": {
     "node": ">=16.0.0"
